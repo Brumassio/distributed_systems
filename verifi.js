@@ -1,11 +1,8 @@
 const express = require("express");
-const axios = require("axios");
 const app = express();
 app.use(express.json()); // for parsing application/json
 
 const port = 4000;
-
-let usuarios = [];
 
 function validarEmail(email) {
   const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
