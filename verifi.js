@@ -1,9 +1,16 @@
 const express = require("express");
 const app = express();
 app.use(express.json()); // for parsing application/json
+const { Kafka } = require("kafkajs");
+
+const kafka = new Kafka({
+  clientId: "my-app",
+  brokers: ["localhost:9092"], // Adicione os endereços dos brokers do seu Kafka aqui
+});
+
+const consumer = kafka.consumer({ groupId: "test-group" });
 
 const port = 4000;
-
 function validarEmail(email) {
   const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regexEmail.test(email);
@@ -56,20 +63,36 @@ function validarCPF(cpf) {
   if (resto !== parseInt(cpfLimpo[10])) {
     return false;
   }
+
+  return true;
 }
 
-app.post("/verifica", async (req, res) => {
-  try {
-    const usuario = req.body;
-    const cpfValido = validarCPF(usuario.cpf);
-    const emailValido = validarEmail(usuario.email);
+const run = async () => {
+  await consumer.connect();
+  await consumer.subscribe({ topic: "new-users", fromBeginning: true });
 
-    res.json(cpfValido && emailValido);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao obter usuários" });
-  }
-});
+  await consumer.run({
+    eachMessage: async ({ topic, partition, message }) => {
+      console.log({
+        value: message.value.toString(),
+      });
+
+      const novoUsuario = JSON.parse(message.value.toString());
+      const cpfValido = validarCPF(novoUsuario.cpf);
+      const emailValido = validarEmail(novoUsuario.email);
+
+      // Verifica a validade do CPF e do email
+      if (cpfValido && emailValido) {
+        console.log("Usuário válido");
+      } else {
+        console.log("Usuário inválido");
+        return false;
+      }
+    },
+  });
+};
+
+run().catch(console.error);
 
 app.listen(port, () => {
   console.log(`Servidor rodando em http://localhost:${port}`);

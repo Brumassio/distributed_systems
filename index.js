@@ -1,51 +1,68 @@
 const express = require("express");
 const app = express();
 const port = 3000;
-const axios = require("axios");
+const { Kafka } = require("kafkajs");
+
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
 
 app.use(express.json()); // for parsing application/json
 
-let usuarios = [];
-
 app.get("/users", (req, res) => {
-  res.json(usuarios);
+  res.json(
+    prisma.user.findMany({
+      select: {
+        nome: true,
+        email: true,
+        cpf: true,
+      },
+    })
+  );
 });
 
-app.post("/users/novo", (req, res) => {
+//configurando o kafka
+const kafka = new Kafka({
+  clientId: "my-app",
+  brokers: ["localhost:9092"],
+});
+
+const producer = kafka.producer();
+
+app.post("/users/novo", async (req, res) => {
+  const dados = await req.body;
   const novoUsuario = {
-    nome: req.body.nome,
-    email: req.body.email,
-    cpf: req.body.cpf,
+    nome: dados.nome,
+    email: dados.email,
+    cpf: dados.cpf,
   };
-  if (
-    usuarios.find(
-      (usuario) =>
-        usuario.cpf === novoUsuario.cpf || usuario.email === novoUsuario.email
-    )
-  ) {
+  const verifiUsuarioJaexiste = await prisma.user.findFirst({
+    where: {
+      OR: [
+        {
+          cpf: novoUsuario.cpf,
+        },
+        {
+          email: novoUsuario.email,
+        },
+      ],
+    },
+  });
+  if (verifiUsuarioJaexiste) {
     return res.status(400).send("Usuário já cadastrado");
   }
-  axios
-    .post("http://localhost:4000/verifica", {
+  // Envia uma mensagem para o tópico "new-users"
+  await producer.send({
+    topic: "new-users",
+    messages: [{ value: JSON.stringify(novoUsuario) }],
+  });
+
+  await prisma.user.create({
+    data: {
+      nome: novoUsuario.nome,
       email: novoUsuario.email,
       cpf: novoUsuario.cpf,
-    })
-    .then((response) => {
-      if (!response.data) {
-        return res.status(400).send("Usuário inválido");
-      }
-      console.log(response.data);
-      console.log(response.status);
-      usuarios.push(novoUsuario);
-      res.status(201).send("Usuário cadastrado com sucesso!");
-    })
-    .catch((error) => {
-      console.error(error);
-      console.log(
-        "Não foi possível acessar a outra API, o cadastro não foi realizado :("
-      );
-      res.status(500).send("Não foi possível cadastrar o usuário");
-    });
+    },
+  });
 });
 
 app.listen(port, () => {
