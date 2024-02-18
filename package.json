@@ -4,7 +4,8 @@
   "description": "trabalho da matéria sistemas distribuidos",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js",
+    "verifi": "nodemon verifi.js"
   },
   "author": "Diogo Brumassio",
   "license": "ISC",
@@ -12,7 +13,8 @@
     "@prisma/client": "^5.9.1",
     "axios": "^1.6.2",
     "express": "^4.18.2",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "nodemon": "^3.0.3"
   },
   "devDependencies": {
     "prisma": "^5.9.1"
