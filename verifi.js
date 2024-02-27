@@ -71,12 +71,14 @@ const run = async () => {
   await consumer.connect();
   await consumer.subscribe({ topic: "new-users", fromBeginning: true });
 
+  console.log("Esperando mensagens...");
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
+      console.log("olá !!! dentro do consumer run");
       console.log({
         value: message.value.toString(),
       });
-
+      console.log("Mensagem recebida", message.value.toString());
       const novoUsuario = JSON.parse(message.value.toString());
       const cpfValido = validarCPF(novoUsuario.cpf);
       const emailValido = validarEmail(novoUsuario.email);
