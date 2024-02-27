@@ -2,6 +2,7 @@ const express = require("express");
 const app = express();
 app.use(express.json()); // for parsing application/json
 const { Kafka } = require("kafkajs");
+const port = 4000;
 
 const kafka = new Kafka({
   clientId: "my-app",
@@ -10,7 +11,6 @@ const kafka = new Kafka({
 
 const consumer = kafka.consumer({ groupId: "test-group" });
 
-const port = 4000;
 function validarEmail(email) {
   const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return regexEmail.test(email);

@@ -26,25 +26,8 @@ const kafka = new Kafka({
   brokers: ["localhost:9092"],
 });
 
-const createKafkaTopic = async () => {
-  const admin = kafka.admin();
-  await admin.connect();
-  await admin.createTopics({
-    topics: [
-      {
-        topic: "new-users",
-        numPartitions: 1,
-        replicationFactor: 1,
-      },
-    ],
-  });
-  console.log('Tópico "new-users" criado com sucesso.');
-  await admin.disconnect();
-};
-
-createKafkaTopic().catch(console.error);
-
 const producer = kafka.producer();
+producer.connect();
 
 app.post("/users/novo", async (req, res) => {
   const dados = await req.body;
@@ -66,7 +49,9 @@ app.post("/users/novo", async (req, res) => {
     },
   });
   if (verifiUsuarioJaexiste) {
-    return res.status(400).send("Usuário já cadastrado");
+    return res
+      .status(400)
+      .send("Usuário já cadastrado, email ou cpf já existente");
   }
   console.log("Enviando mensagem para o Kafka");
   console.log(novoUsuario);
@@ -84,6 +69,7 @@ app.post("/users/novo", async (req, res) => {
         cpf: novoUsuario.cpf,
       },
     });
+    return res.status(201).send("Usuário cadastrado com sucesso");
   } catch (e) {
     console.error(e);
     return res.status(500).send("Erro ao enviar mensagem para o Kafka");
