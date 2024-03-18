@@ -6,7 +6,7 @@ const port = 4000;
 
 const kafka = new Kafka({
   clientId: "my-app",
-  brokers: ["localhost:9092"], // Adicione os endereços dos brokers do seu Kafka aqui
+  brokers: ["localhost:9092"],
 });
 
 const consumer = kafka.consumer({ groupId: "test-group" });
@@ -74,7 +74,6 @@ const run = async () => {
   console.log("Esperando mensagens...");
   await consumer.run({
     eachMessage: async ({ topic, partition, message }) => {
-      console.log("olá !!! dentro do consumer run");
       console.log({
         value: message.value.toString(),
       });
