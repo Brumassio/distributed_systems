@@ -5,19 +5,21 @@ const app = express();
 const port = 5000;
 
 // Lista de URLs dos serviços replicados
-const serviceUrls = ["http://localhost:3000", "http://localhost:4000"];
+const serviceUrls = ["http://localhost:3000", "http://localhost:6000"];
 
 // Índice atual para balanceamento de carga
 let currentServiceIndex = 0;
 
 // Configurar proxy para rotear solicitações para os serviços replicados
-app.use(
-  "/",
-  createProxyMiddleware({
-    target: serviceUrls[currentServiceIndex], // Iniciar com o primeiro serviço
+app.use((req, res, next) => {
+  // Defina o destino da solicitação com base no índice atual
+  const targetUrl = serviceUrls[currentServiceIndex];
+  // Crie o middleware do proxy
+
+  const proxyMiddleware = createProxyMiddleware({
+    target: targetUrl,
     changeOrigin: true,
     onError: (err, req, res) => {
-      // Lidar com erros de comunicação com o serviço
       console.error("Error communicating with service:", err.message);
       // Tentar redirecionar a solicitação para outro serviço
       const nextServiceIndex = (currentServiceIndex + 1) % serviceUrls.length;
@@ -26,14 +28,13 @@ app.use(
         "Redirecting request to next service:",
         serviceUrls[nextServiceIndex]
       );
-      req.url = req.originalUrl; // Restaurar a URL original
-      createProxyMiddleware({
-        target: serviceUrls[nextServiceIndex],
-        changeOrigin: true,
-      })(req, res);
+      // Chame next() para passar o controle para o próximo middleware na pilha
+      next();
     },
-  })
-);
+  });
+  // Execute o middleware do proxy
+  proxyMiddleware(req, res, next);
+});
 
 // Atualizar o índice de serviço atual após cada solicitação
 app.use((req, res, next) => {
